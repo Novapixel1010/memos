@@ -309,6 +309,19 @@ func TestMigrationSpaceMemberStatusBackfillsActive(t *testing.T) {
 	require.NoError(t, err)
 	_, err = db.ExecContext(ctx, "ALTER TABLE space DROP COLUMN payload")
 	require.NoError(t, err)
+	// due_time/reminder_triggered postdate the simulated 0.31.4 schema too;
+	// drop them so replaying migrations up to current doesn't try to
+	// re-add columns the LATEST.sql-initialized database already has.
+	dropDueTimeIndexSQL := "DROP INDEX idx_memo_due_time"
+	if getDriverFromEnv() == "mysql" {
+		dropDueTimeIndexSQL = "DROP INDEX idx_memo_due_time ON memo"
+	}
+	_, err = db.ExecContext(ctx, dropDueTimeIndexSQL)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, "ALTER TABLE memo DROP COLUMN due_time")
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, "ALTER TABLE memo DROP COLUMN reminder_triggered")
+	require.NoError(t, err)
 
 	basicSetting, err := ts.GetInstanceBasicSetting(ctx)
 	require.NoError(t, err)
@@ -376,6 +389,19 @@ func TestMigrationRepairsPollSchemaAfterInPlaceEdit(t *testing.T) {
 		insertOldVote = "INSERT INTO poll_vote (poll_uid, option_index, voter_id) VALUES ($1, $2, $3)"
 	}
 	_, err = db.ExecContext(ctx, insertOldVote, "stuck-poll-uid", 0, user.ID)
+	require.NoError(t, err)
+	// due_time/reminder_triggered postdate the simulated 0.32.1 schema too;
+	// drop them so replaying migrations up to current doesn't try to
+	// re-add columns the LATEST.sql-initialized database already has.
+	dropDueTimeIndexSQL := "DROP INDEX idx_memo_due_time"
+	if getDriverFromEnv() == "mysql" {
+		dropDueTimeIndexSQL = "DROP INDEX idx_memo_due_time ON memo"
+	}
+	_, err = db.ExecContext(ctx, dropDueTimeIndexSQL)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, "ALTER TABLE memo DROP COLUMN due_time")
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, "ALTER TABLE memo DROP COLUMN reminder_triggered")
 	require.NoError(t, err)
 
 	basicSetting, err := ts.GetInstanceBasicSetting(ctx)

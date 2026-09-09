@@ -387,11 +387,18 @@ func (s *APIV1Service) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoR
 				return nil, status.Errorf(codes.InvalidArgument, "content too long (max %d characters)", contentLengthLimit)
 			}
 			nextMemo.Content = request.Memo.Content
+			previousReminderTriggered := nextMemo.ReminderTriggered
 			if err := memopayload.RebuildMemoPayload(ctx, &nextMemo, s.MarkdownService); err != nil {
 				return nil, status.Errorf(codes.Internal, "failed to rebuild memo payload: %v", err)
 			}
 			update.Content = &nextMemo.Content
 			update.Payload = nextMemo.Payload
+			update.DueTime = nextMemo.DueTime
+			update.ClearDueTime = nextMemo.DueTime == nil
+			if nextMemo.ReminderTriggered != previousReminderTriggered {
+				triggered := nextMemo.ReminderTriggered
+				update.ReminderTriggered = &triggered
+			}
 		} else if path == "pinned" {
 			update.Pinned = &request.Memo.Pinned
 		} else if path == "state" {

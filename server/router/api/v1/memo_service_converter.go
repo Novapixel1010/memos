@@ -65,6 +65,10 @@ func (s *APIV1Service) convertMemoFromStoreWithCreators(ctx context.Context, mem
 		memoMessage.Property = convertMemoPropertyFromStore(memo.Payload.Property)
 		memoMessage.Location = convertLocationFromStore(memo.Payload.Location)
 	}
+	if memo.DueTime != nil {
+		dueTime := timestamppb.New(time.Unix(*memo.DueTime, 0))
+		memoMessage.DueTime = dueTime
+	}
 
 	// Parent identity is part of a readable comment's context. It grants no
 	// access to the parent; clients resolve it independently and handle denial.

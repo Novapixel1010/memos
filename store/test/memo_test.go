@@ -64,6 +64,61 @@ func TestMemoStore(t *testing.T) {
 	ts.Close()
 }
 
+func TestMemoStoreDueTime(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	ts := NewTestingStore(ctx, t)
+	user, err := createTestingHostUser(ctx, ts)
+	require.NoError(t, err)
+
+	dueTime := int64(1893456000) // 2030-01-01T00:00:00Z
+	memo, err := ts.CreateMemo(ctx, &store.Memo{
+		UID:        "test-due-time",
+		CreatorID:  user.ID,
+		Content:    "renew passport !due(2030-01-01:00:00)",
+		Visibility: store.Private,
+		DueTime:    &dueTime,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, memo.DueTime)
+	require.Equal(t, dueTime, *memo.DueTime)
+	require.False(t, memo.ReminderTriggered)
+
+	// Not yet due: DueBefore excludes it.
+	before := dueTime - 1
+	dueMemos, err := ts.ListMemos(ctx, &store.FindMemo{DueBefore: &before})
+	require.NoError(t, err)
+	require.Empty(t, dueMemos)
+
+	// Due: DueBefore includes it, and it hasn't been triggered yet.
+	atOrAfter := dueTime
+	notTriggered := false
+	dueMemos, err = ts.ListMemos(ctx, &store.FindMemo{DueBefore: &atOrAfter, ReminderTriggered: &notTriggered})
+	require.NoError(t, err)
+	require.Len(t, dueMemos, 1)
+	require.Equal(t, memo.ID, dueMemos[0].ID)
+
+	// Mark the reminder as delivered; it should drop out of the pending query.
+	triggered := true
+	require.NoError(t, ts.UpdateMemo(ctx, &store.UpdateMemo{ID: memo.ID, ReminderTriggered: &triggered}))
+	dueMemos, err = ts.ListMemos(ctx, &store.FindMemo{DueBefore: &atOrAfter, ReminderTriggered: &notTriggered})
+	require.NoError(t, err)
+	require.Empty(t, dueMemos)
+
+	memo, err = ts.GetMemo(ctx, &store.FindMemo{ID: &memo.ID})
+	require.NoError(t, err)
+	require.True(t, memo.ReminderTriggered)
+	require.NotNil(t, memo.DueTime)
+
+	// Clearing the due time also removes it from any due-time query.
+	require.NoError(t, ts.UpdateMemo(ctx, &store.UpdateMemo{ID: memo.ID, ClearDueTime: true}))
+	memo, err = ts.GetMemo(ctx, &store.FindMemo{ID: &memo.ID})
+	require.NoError(t, err)
+	require.Nil(t, memo.DueTime)
+
+	ts.Close()
+}
+
 func TestMemoListByTags(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

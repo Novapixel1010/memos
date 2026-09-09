@@ -49,14 +49,22 @@ func (r *Runner) RunOnce(ctx context.Context) {
 		// Process batch
 		batchSuccessCount := 0
 		for _, memo := range memos {
+			previousReminderTriggered := memo.ReminderTriggered
 			if err := RebuildMemoPayload(ctx, memo, r.MarkdownService); err != nil {
 				slog.Error("failed to rebuild memo payload", "err", err, "memoID", memo.ID)
 				continue
 			}
-			if err := r.Store.UpdateMemo(ctx, &store.UpdateMemo{
-				ID:      memo.ID,
-				Payload: memo.Payload,
-			}); err != nil {
+			update := &store.UpdateMemo{
+				ID:           memo.ID,
+				Payload:      memo.Payload,
+				DueTime:      memo.DueTime,
+				ClearDueTime: memo.DueTime == nil,
+			}
+			if memo.ReminderTriggered != previousReminderTriggered {
+				triggered := memo.ReminderTriggered
+				update.ReminderTriggered = &triggered
+			}
+			if err := r.Store.UpdateMemo(ctx, update); err != nil {
 				slog.Error("failed to update memo", "err", err, "memoID", memo.ID)
 				continue
 			}
@@ -84,5 +92,24 @@ func RebuildMemoPayload(_ context.Context, memo *store.Memo, markdownService mar
 
 	memo.Payload.Tags = data.Tags
 	memo.Payload.Property = data.Property
+
+	previousDueTime := memo.DueTime
+	if dueTime, ok := markdown.ExtractDueTime([]byte(memo.Content)); ok {
+		memo.DueTime = &dueTime
+	} else {
+		memo.DueTime = nil
+	}
+	// A due time that changed (including being added or removed) invalidates
+	// any reminder already delivered for the previous due time.
+	if !sameDueTime(previousDueTime, memo.DueTime) {
+		memo.ReminderTriggered = false
+	}
 	return nil
+}
+
+func sameDueTime(a, b *int64) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
 }

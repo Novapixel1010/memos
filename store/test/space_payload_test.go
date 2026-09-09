@@ -65,6 +65,19 @@ func TestMigrationSpacePayloadBackfillsDefault(t *testing.T) {
 	require.Nil(t, space.Payload.Icon)
 	_, err = ts.GetDriver().GetDB().ExecContext(ctx, "ALTER TABLE space DROP COLUMN payload")
 	require.NoError(t, err)
+	// due_time/reminder_triggered postdate the simulated 0.31.6 schema too;
+	// drop them so replaying migrations up to current doesn't try to
+	// re-add columns the LATEST.sql-initialized database already has.
+	dropDueTimeIndexSQL := "DROP INDEX idx_memo_due_time"
+	if getDriverFromEnv() == "mysql" {
+		dropDueTimeIndexSQL = "DROP INDEX idx_memo_due_time ON memo"
+	}
+	_, err = ts.GetDriver().GetDB().ExecContext(ctx, dropDueTimeIndexSQL)
+	require.NoError(t, err)
+	_, err = ts.GetDriver().GetDB().ExecContext(ctx, "ALTER TABLE memo DROP COLUMN due_time")
+	require.NoError(t, err)
+	_, err = ts.GetDriver().GetDB().ExecContext(ctx, "ALTER TABLE memo DROP COLUMN reminder_triggered")
+	require.NoError(t, err)
 	setting, err := ts.GetInstanceBasicSetting(ctx)
 	require.NoError(t, err)
 	setting.SchemaVersion = "0.31.6"
