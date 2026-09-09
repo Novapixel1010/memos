@@ -333,6 +333,7 @@
     "memo-comment": "{{user}} {{memo}} qeydinizə şərh yazıb.",
     "no-archived": "Arxivlənmiş bildiriş yoxdur",
     "no-unread": "Oxunmamış bildiriş yoxdur",
+    "reminder": "Reminder due",
     "space-invitation": "sizi sahəyə qoşulmağa dəvət etdi",
     "space-invitation-accepted": "Bu sahəyə qoşuldunuz.",
     "space-invitation-open": "Sahəni aç",
@@ -501,6 +502,11 @@
     "embedded-usage": "Yerləşdirilmiş məzmun kimi istifadə et",
     "no-memos-found": "Qeyd tapılmadı",
     "search-placeholder": "Məzmunda axtar"
+  },
+  "reminder": {
+    "due-today": "Due today",
+    "overdue": "Overdue",
+    "upcoming": "Upcoming"
   },
   "resource": {
     "clear": "Təmizlə",
