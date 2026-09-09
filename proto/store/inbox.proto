@@ -21,12 +21,22 @@ message InboxMessage {
     int32 space_id = 1;
   }
 
+  message ReminderPayload {
+    // The memo whose `!due(...)` reminder reached its due time.
+    int32 memo_id = 1;
+    // The due time (unix seconds) that triggered this reminder, captured at
+    // fire time so a later edit to the memo's due date does not change the
+    // meaning of an already-delivered notification.
+    int64 due_time = 2;
+  }
+
   // The type of the inbox message.
   Type type = 1;
   oneof payload {
     MemoCommentPayload memo_comment = 2;
     MemoMentionPayload memo_mention = 3;
     SpaceInvitationPayload space_invitation = 4;
+    ReminderPayload reminder = 5;
   }
 
   enum Type {
@@ -37,5 +47,7 @@ message InboxMessage {
     MEMO_MENTION = 2;
     // Space invitation notification.
     SPACE_INVITATION = 3;
+    // Memo reminder/due-date notification.
+    REMINDER = 4;
   }
 }

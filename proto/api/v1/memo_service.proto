@@ -280,6 +280,11 @@ message Memo {
     (google.api.resource_reference) = {type: "memos.api.v1/Space"}
   ];
 
+  // Output only. The reminder due time parsed from a `!due(YYYY-MM-DD)` or
+  // `!due(YYYY-MM-DD:HH:MM)` token in the content, if any. Unset when the
+  // memo has no reminder token.
+  optional google.protobuf.Timestamp due_time = 20 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // Computed properties of a memo.
   message Property {
     bool has_link = 1;

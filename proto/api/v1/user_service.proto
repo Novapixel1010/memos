@@ -961,6 +961,7 @@ message UserNotification {
     MemoCommentPayload memo_comment = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
     MemoMentionPayload memo_mention = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
     SpaceInvitationPayload space_invitation = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+    ReminderPayload reminder = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
   }
 
   message MemoCommentPayload {
@@ -1018,6 +1019,18 @@ message UserNotification {
     }
   }
 
+  message ReminderPayload {
+    // The memo whose reminder reached its due time.
+    // Format: memos/{memo}
+    string memo = 1;
+
+    // Preview text of the memo.
+    string memo_snippet = 2;
+
+    // The due time (unix seconds) that triggered this reminder.
+    google.protobuf.Timestamp due_time = 3;
+  }
+
   enum Status {
     STATUS_UNSPECIFIED = 0;
     UNREAD = 1;
@@ -1029,6 +1042,7 @@ message UserNotification {
     MEMO_COMMENT = 1;
     MEMO_MENTION = 2;
     SPACE_INVITATION = 3;
+    REMINDER = 4;
   }
 }
 

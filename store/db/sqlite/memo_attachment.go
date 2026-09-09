@@ -222,6 +222,14 @@ func applyMemoUpdate(ctx context.Context, executor memoUpdateExecer, update *sto
 	} else if v := update.SpaceID; v != nil {
 		set, args = append(set, "`space_id` = ?"), append(args, *v)
 	}
+	if update.ClearDueTime {
+		set = append(set, "`due_time` = NULL")
+	} else if v := update.DueTime; v != nil {
+		set, args = append(set, "`due_time` = ?"), append(args, *v)
+	}
+	if v := update.ReminderTriggered; v != nil {
+		set, args = append(set, "`reminder_triggered` = ?"), append(args, *v)
+	}
 	if len(set) == 0 {
 		return nil
 	}

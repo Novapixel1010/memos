@@ -46,6 +46,12 @@ func insertMySQLMemo(ctx context.Context, tx *sql.Tx, create *store.Memo) (*stor
 	}
 	args := []any{create.UID, create.CreatorID, create.Content, create.Visibility, payload, create.SpaceID}
 
+	if create.DueTime != nil {
+		fields = append(fields, "`due_time`")
+		placeholder = append(placeholder, "?")
+		args = append(args, *create.DueTime)
+	}
+
 	// Add custom timestamps if provided
 	if create.CreatedTs != 0 {
 		fields = append(fields, "`created_ts`")
@@ -72,9 +78,9 @@ func insertMySQLMemo(ctx context.Context, tx *sql.Tx, create *store.Memo) (*stor
 	memo := &store.Memo{}
 	var payloadBytes []byte
 	err = tx.QueryRowContext(ctx, `SELECT id, uid, creator_id, UNIX_TIMESTAMP(created_ts), UNIX_TIMESTAMP(updated_ts), row_status,
-		content, visibility, pinned, payload, space_id
+		content, visibility, pinned, payload, space_id, due_time, reminder_triggered
 		FROM memo WHERE id = ?`, id).Scan(&memo.ID, &memo.UID, &memo.CreatorID, &memo.CreatedTs, &memo.UpdatedTs, &memo.RowStatus,
-		&memo.Content, &memo.Visibility, &memo.Pinned, &payloadBytes, &memo.SpaceID)
+		&memo.Content, &memo.Visibility, &memo.Pinned, &payloadBytes, &memo.SpaceID, &memo.DueTime, &memo.ReminderTriggered)
 	if err != nil {
 		return nil, err
 	}
@@ -181,6 +187,12 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 	if access := find.Access; access != nil {
 		where = append(where, mysqlMemoAccessPredicate(access, "`memo`", "`access_member`", &args))
 	}
+	if v := find.DueBefore; v != nil {
+		where, args = append(where, "`memo`.`due_time` IS NOT NULL AND `memo`.`due_time` <= ?"), append(args, *v)
+	}
+	if v := find.ReminderTriggered; v != nil {
+		where, args = append(where, "`memo`.`reminder_triggered` = ?"), append(args, *v)
+	}
 	if find.ExcludeComments {
 		where = append(where, `NOT EXISTS (
 			SELECT 1 FROM memo_relation AS comment_relation
@@ -214,6 +226,8 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 		"`memo`.`pinned` AS `pinned`",
 		"`memo`.`payload` AS `payload`",
 		"`memo`.`space_id` AS `space_id`",
+		"`memo`.`due_time` AS `due_time`",
+		"`memo`.`reminder_triggered` AS `reminder_triggered`",
 		`(SELECT parent_memo.uid
 			FROM memo_relation AS parent_relation
 			JOIN memo AS parent_memo ON parent_memo.id = parent_relation.related_memo_id
@@ -258,6 +272,8 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 			&memo.Pinned,
 			&payloadBytes,
 			&memo.SpaceID,
+			&memo.DueTime,
+			&memo.ReminderTriggered,
 			&memo.ParentUID,
 		}
 		if !find.ExcludeContent {

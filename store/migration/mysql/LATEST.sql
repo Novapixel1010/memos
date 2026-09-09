@@ -60,10 +60,13 @@ CREATE TABLE `memo` (
   `visibility` VARCHAR(256) NOT NULL DEFAULT 'PRIVATE',
   `pinned` BOOLEAN NOT NULL DEFAULT FALSE,
   `payload` JSON NOT NULL,
-  `space_id` INT DEFAULT NULL
+  `space_id` INT DEFAULT NULL,
+  `due_time` BIGINT DEFAULT NULL,
+  `reminder_triggered` BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE INDEX `idx_memo_space_id` ON `memo`(`space_id`, `row_status`, `created_ts`, `id`);
+CREATE INDEX `idx_memo_due_time` ON `memo`(`due_time`);
 
 -- memo_relation
 CREATE TABLE `memo_relation` (

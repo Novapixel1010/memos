@@ -63,6 +63,13 @@ type Memo struct {
 	Payload    *storepb.MemoPayload
 	SpaceID    *int32
 
+	// DueTime is the unix timestamp (seconds) parsed from a `!due(...)`
+	// reminder token in Content, if any.
+	DueTime *int64
+	// ReminderTriggered indicates whether the background reminder runner
+	// has already delivered the Inbox notification for the current DueTime.
+	ReminderTriggered bool
+
 	// Composed fields
 	ParentUID *string
 }
@@ -85,6 +92,14 @@ type FindMemo struct {
 	ExcludeContent       bool
 	ExcludeComments      bool
 	Filters              []string
+
+	// DueBefore, when set, restricts results to memos with a non-null
+	// DueTime less than or equal to this unix timestamp (seconds).
+	DueBefore *int64
+	// ReminderTriggered, when set, filters by the ReminderTriggered flag.
+	// Used by the background reminder runner to find due, not-yet-notified
+	// memos.
+	ReminderTriggered *bool
 
 	// Pagination
 	Limit  *int
@@ -117,6 +132,13 @@ type UpdateMemo struct {
 	Payload    *storepb.MemoPayload
 	SpaceID    *int32
 	ClearSpace bool
+	// DueTime sets the memo's reminder due time (unix seconds).
+	DueTime *int64
+	// ClearDueTime removes the memo's reminder due time.
+	ClearDueTime bool
+	// ReminderTriggered updates the ReminderTriggered flag, e.g. to mark a
+	// reminder as delivered or to reset it after the due time changes.
+	ReminderTriggered *bool
 	// Policy is set by transport-facing author mutations. Drivers revalidate it
 	// in the same transaction as the update; nil preserves trusted internal and
 	// migration callers.
@@ -344,6 +366,9 @@ func isLifecycleOnlyMemoUpdate(update *UpdateMemo) bool {
 		update.RowStatus == nil &&
 		update.Content == nil &&
 		update.Pinned == nil &&
+		update.DueTime == nil &&
+		!update.ClearDueTime &&
+		update.ReminderTriggered == nil &&
 		update.Payload == nil
 }
 

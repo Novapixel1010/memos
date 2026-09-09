@@ -44,6 +44,11 @@ func insertPostgresMemo(ctx context.Context, tx *sql.Tx, create *store.Memo) err
 	}
 	args := []any{create.UID, create.CreatorID, create.Content, create.Visibility, payload, create.SpaceID}
 
+	if create.DueTime != nil {
+		fields = append(fields, "due_time")
+		args = append(args, *create.DueTime)
+	}
+
 	// Add custom timestamps if provided
 	if create.CreatedTs != 0 {
 		fields = append(fields, "created_ts")
@@ -160,6 +165,12 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 	if access := find.Access; access != nil {
 		where = append(where, postgresMemoAccessPredicate(access, "memo", "access_member", &args))
 	}
+	if v := find.DueBefore; v != nil {
+		where, args = append(where, "memo.due_time IS NOT NULL AND memo.due_time <= "+placeholder(len(args)+1)), append(args, *v)
+	}
+	if v := find.ReminderTriggered; v != nil {
+		where, args = append(where, "memo.reminder_triggered = "+placeholder(len(args)+1)), append(args, *v)
+	}
 	if find.ExcludeComments {
 		where = append(where, `NOT EXISTS (
 			SELECT 1 FROM memo_relation AS comment_relation
@@ -193,6 +204,8 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 		`memo.pinned AS pinned`,
 		`memo.payload AS payload`,
 		`memo.space_id AS space_id`,
+		`memo.due_time AS due_time`,
+		`memo.reminder_triggered AS reminder_triggered`,
 		`(SELECT parent_memo.uid
 			FROM memo_relation AS parent_relation
 			JOIN memo AS parent_memo ON parent_memo.id = parent_relation.related_memo_id
@@ -237,6 +250,8 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 			&memo.Pinned,
 			&payloadBytes,
 			&memo.SpaceID,
+			&memo.DueTime,
+			&memo.ReminderTriggered,
 			&memo.ParentUID,
 		}
 		if !find.ExcludeContent {

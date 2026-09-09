@@ -61,11 +61,14 @@ CREATE TABLE memo (
   visibility TEXT NOT NULL CHECK (visibility IN ('PUBLIC', 'PROTECTED', 'PRIVATE', 'SPACE')) DEFAULT 'PRIVATE',
   pinned INTEGER NOT NULL CHECK (pinned IN (0, 1)) DEFAULT 0,
   payload TEXT NOT NULL DEFAULT '{}',
-  space_id INTEGER DEFAULT NULL
+  space_id INTEGER DEFAULT NULL,
+  due_time BIGINT DEFAULT NULL,
+  reminder_triggered INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX idx_memo_creator_id ON memo(creator_id);
 CREATE INDEX idx_memo_space_id ON memo(space_id, row_status, created_ts DESC, id DESC);
+CREATE INDEX idx_memo_due_time ON memo(due_time) WHERE due_time IS NOT NULL;
 
 -- memo_relation
 CREATE TABLE memo_relation (
