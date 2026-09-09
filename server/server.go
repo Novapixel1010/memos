@@ -20,6 +20,7 @@ import (
 	"github.com/usememos/memos/server/router/fileserver"
 	"github.com/usememos/memos/server/router/frontend"
 	"github.com/usememos/memos/server/router/mcp"
+	"github.com/usememos/memos/server/runner/reminder"
 	"github.com/usememos/memos/store"
 )
 
@@ -30,9 +31,11 @@ type Server struct {
 	Profile *profile.Profile
 	Store   *store.Store
 
-	echoServer   *echo.Echo
-	httpServer   *http.Server
-	apiV1Service *apiv1.APIV1Service
+	echoServer              *echo.Echo
+	httpServer              *http.Server
+	apiV1Service            *apiv1.APIV1Service
+	reminderRunner          *reminder.Runner
+	cancelBackgroundRunners context.CancelFunc
 }
 
 func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store) (*Server, error) {
@@ -84,6 +87,8 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 	}
 	mcpService.RegisterRoutes(echoServer)
 
+	s.reminderRunner = reminder.NewRunner(store)
+
 	return s, nil
 }
 
@@ -116,6 +121,10 @@ func (s *Server) Start() error {
 		}
 	}()
 
+	backgroundCtx, cancel := context.WithCancel(context.Background())
+	s.cancelBackgroundRunners = cancel
+	go s.reminderRunner.Run(backgroundCtx)
+
 	return nil
 }
 
@@ -125,6 +134,9 @@ func (s *Server) Shutdown(ctx context.Context) {
 
 	slog.Info("server shutting down")
 
+	if s.cancelBackgroundRunners != nil {
+		s.cancelBackgroundRunners()
+	}
 	s.closeLongLivedConnections()
 	s.shutdownHTTPServer(ctx)
 	s.apiV1Service.CloseAttachmentUploads()
