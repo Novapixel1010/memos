@@ -6,6 +6,12 @@ export type PrimaryMemoScope = Exclude<MemoScope, "archived">;
 export const BUILTIN_TASKS_VIEW_ID = "__built_in_tasks__";
 export const BUILTIN_TASKS_VIEW_FILTER = "has_task_list && has_incomplete_tasks";
 
+export const BUILTIN_OVERDUE_VIEW_ID = "__built_in_overdue__";
+export const BUILTIN_OVERDUE_VIEW_FILTER = "due_time < now";
+
+export const BUILTIN_UPCOMING_VIEW_ID = "__built_in_upcoming__";
+export const BUILTIN_UPCOMING_VIEW_FILTER = "due_time >= now";
+
 export const getMemoViewId = (name: string): string => {
   const parts = name.split("/");
   return parts.length === 4 ? parts[3] : name;

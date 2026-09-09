@@ -1,7 +1,9 @@
 import dayjs from "dayjs";
 import { isEqual } from "lodash-es";
 import {
+  AlarmClockIcon,
   BookmarkIcon,
+  CalendarClockIcon,
   CalendarIcon,
   CheckCircleIcon,
   CodeIcon,
@@ -22,7 +24,13 @@ import { useAppSidebar } from "@/contexts/AppSidebarContext";
 import { type FilterFactor, getMemoFilterKey, type MemoFilter, useMemoFilterContext } from "@/contexts/MemoFilterContext";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useMemoViews } from "@/hooks/useUserQueries";
-import { BUILTIN_TASKS_VIEW_ID, getMemoViewId, isMemoCollectionRoute } from "@/lib/memo-views";
+import {
+  BUILTIN_OVERDUE_VIEW_ID,
+  BUILTIN_TASKS_VIEW_ID,
+  BUILTIN_UPCOMING_VIEW_ID,
+  getMemoViewId,
+  isMemoCollectionRoute,
+} from "@/lib/memo-views";
 import { cn } from "@/lib/utils";
 import { useTranslate } from "@/utils/i18n";
 
@@ -153,6 +161,8 @@ const MemoFilters = ({ className }: { className?: string }) => {
   const viewChip = (() => {
     if (!viewApplies) return null;
     if (memoView === BUILTIN_TASKS_VIEW_ID) return { icon: SquareCheckIcon, label: t("common.tasks") };
+    if (memoView === BUILTIN_OVERDUE_VIEW_ID) return { icon: AlarmClockIcon, label: t("reminder.overdue") };
+    if (memoView === BUILTIN_UPCOMING_VIEW_ID) return { icon: CalendarClockIcon, label: t("reminder.upcoming") };
     const view = memoViews.find((item) => getMemoViewId(item.name) === memoView);
     return view?.title
       ? {

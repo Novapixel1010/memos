@@ -5,7 +5,15 @@ import useCurrentUser from "@/hooks/useCurrentUser";
 import { useMemoViews } from "@/hooks/useUserQueries";
 import { buildTimestampRangeFilter, getLocalDayTimestampRange, getTimeBasisField } from "@/lib/calendar-utils";
 import { combineCELFilters } from "@/lib/cel-filter";
-import { BUILTIN_TASKS_VIEW_FILTER, BUILTIN_TASKS_VIEW_ID, getMemoViewId } from "@/lib/memo-views";
+import {
+  BUILTIN_OVERDUE_VIEW_FILTER,
+  BUILTIN_OVERDUE_VIEW_ID,
+  BUILTIN_TASKS_VIEW_FILTER,
+  BUILTIN_TASKS_VIEW_ID,
+  BUILTIN_UPCOMING_VIEW_FILTER,
+  BUILTIN_UPCOMING_VIEW_ID,
+  getMemoViewId,
+} from "@/lib/memo-views";
 import { buildMemoCreatorFilter, getVisibilityName } from "@/lib/resource-names";
 import { Visibility } from "@/types/proto/api/v1/memo_service_pb";
 
@@ -49,6 +57,10 @@ export const buildMemoFilter = ({
 
   if (currentMemoView === BUILTIN_TASKS_VIEW_ID) {
     conditions.push(BUILTIN_TASKS_VIEW_FILTER);
+  } else if (currentMemoView === BUILTIN_OVERDUE_VIEW_ID) {
+    conditions.push(BUILTIN_OVERDUE_VIEW_FILTER);
+  } else if (currentMemoView === BUILTIN_UPCOMING_VIEW_ID) {
+    conditions.push(BUILTIN_UPCOMING_VIEW_FILTER);
   } else if (selectedMemoViewFilter) {
     conditions.push(selectedMemoViewFilter);
   }

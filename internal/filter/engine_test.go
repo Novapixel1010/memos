@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	_ "modernc.org/sqlite"
@@ -643,6 +644,64 @@ func TestHasLocationSQLiteBehavior(t *testing.T) {
 		{`!has_location`, []int{1, 4, 5}},
 		{`has_location == false`, []int{1, 4, 5}},
 		{`has_location != false`, []int{2, 3}},
+	}
+	for _, tc := range cases {
+		stmt, err := engine.CompileToStatement(context.Background(), tc.expr, RenderOptions{Dialect: DialectSQLite})
+		require.NoError(t, err, tc.expr)
+		require.Equal(t, tc.want, selectMemoIDs(t, db, stmt), tc.expr)
+	}
+}
+
+func TestRenderDueTimeComparisonsPerDialect(t *testing.T) {
+	t.Parallel()
+
+	engine, err := NewEngine(NewSchema())
+	require.NoError(t, err)
+
+	for _, dialect := range []DialectName{DialectSQLite, DialectMySQL, DialectPostgres} {
+		overdue, err := engine.CompileToStatement(context.Background(), `due_time < now`, RenderOptions{Dialect: dialect})
+		require.NoError(t, err, dialect)
+		require.Contains(t, overdue.SQL, "due_time", dialect)
+
+		upcoming, err := engine.CompileToStatement(context.Background(), `due_time >= now`, RenderOptions{Dialect: dialect})
+		require.NoError(t, err, dialect)
+		require.Contains(t, upcoming.SQL, "due_time", dialect)
+	}
+}
+
+func TestDueTimeFiltersExcludeMemosWithoutADueTime(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	require.NoError(t, err)
+	db.SetMaxOpenConns(1)
+	t.Cleanup(func() { require.NoError(t, db.Close()) })
+
+	_, err = db.Exec(`CREATE TABLE memo (id INTEGER PRIMARY KEY, due_time INTEGER)`)
+	require.NoError(t, err)
+
+	now := time.Now()
+	past := now.Add(-time.Hour).Unix()
+	future := now.Add(time.Hour).Unix()
+	for _, fixture := range []struct {
+		id      int
+		dueTime any
+	}{
+		{1, past},   // overdue
+		{2, future}, // upcoming
+		{3, nil},    // no reminder
+	} {
+		_, err = db.Exec(`INSERT INTO memo (id, due_time) VALUES (?, ?)`, fixture.id, fixture.dueTime)
+		require.NoError(t, err)
+	}
+
+	engine, err := NewEngine(NewSchema())
+	require.NoError(t, err)
+
+	cases := []struct {
+		expr string
+		want []int
+	}{
+		{`due_time < now`, []int{1}},
+		{`due_time >= now`, []int{2}},
 	}
 	for _, tc := range cases {
 		stmt, err := engine.CompileToStatement(context.Background(), tc.expr, RenderOptions{Dialect: DialectSQLite})

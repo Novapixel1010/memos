@@ -5,7 +5,8 @@ import { gfmFromMarkdown } from "mdast-util-gfm";
 import { gfm } from "micromark-extension-gfm";
 import { decodeString } from "micromark-util-decode-string";
 import type { Node as UnistNode } from "unist";
-import type { MentionNode, MentionNodeData, TagNode, TagNodeData } from "@/types/markdown";
+import type { DueDateNode, DueDateNodeData, MentionNode, MentionNodeData, TagNode, TagNodeData } from "@/types/markdown";
+import { findDueMatches } from "@/utils/due-grammar";
 import { findMarkdownGFMEmailRanges, type GFMEmailSourceRange, type MarkdownSourceNode } from "@/utils/gfm-email";
 import { findMarkdownGFMURLRanges } from "@/utils/gfm-url";
 import { hasExactMarkdownRange, resolvedMarkdownLinkRanges } from "@/utils/markdown-link";
@@ -18,7 +19,8 @@ import { isUsernameCharacter } from "@/utils/username";
 type Segment =
   | { type: "text"; value: string }
   | { type: "tag"; source: string; value: string }
-  | { type: "mention"; source: string; value: string };
+  | { type: "mention"; source: string; value: string }
+  | { type: "due"; source: string; value: string; hasTime: boolean };
 
 interface SourceRange {
   from: number;
@@ -360,6 +362,14 @@ function segmentsForTextNode(
         source: run.source.slice(match.from, match.to),
         value: match.username,
       })),
+      ...findDueMatches(run.source).map((match) => ({
+        type: "due" as const,
+        from: run.valueFrom + match.from,
+        to: run.valueFrom + match.to,
+        source: run.source.slice(match.from, match.to),
+        value: match.isoDateTime,
+        hasTime: match.hasTime,
+      })),
     ])
     .sort((left, right) => left.from - right.from || left.to - right.to);
   if (matches.length === 0) return [{ type: "text", value }];
@@ -369,7 +379,11 @@ function segmentsForTextNode(
   for (const match of matches) {
     if (match.from < cursor) continue;
     if (cursor < match.from) segments.push({ type: "text", value: value.slice(cursor, match.from) });
-    segments.push({ type: match.type, source: match.source, value: match.value });
+    if (match.type === "due") {
+      segments.push({ type: "due", source: match.source, value: match.value, hasTime: match.hasTime });
+    } else {
+      segments.push({ type: match.type, source: match.source, value: match.value });
+    }
     cursor = match.to;
   }
   if (cursor < value.length) segments.push({ type: "text", value: value.slice(cursor) });
@@ -391,6 +405,24 @@ function createTagNode(tagValue: string, source: string): TagNode {
     value: tagValue,
     data,
   } as TagNode;
+}
+
+function createDueDateNode(isoDateTime: string, source: string, hasTime: boolean): DueDateNode {
+  const data: DueDateNodeData = {
+    hName: "span",
+    hProperties: {
+      className: "due-date",
+      "data-due-date": isoDateTime,
+      "data-has-time": hasTime ? "true" : "false",
+    },
+    hChildren: [{ type: "text", value: source }],
+  };
+
+  return {
+    type: "dueDateNode",
+    value: isoDateTime,
+    data,
+  } as DueDateNode;
 }
 
 function createMentionNode(username: string, source: string): MentionNode {
@@ -733,6 +765,7 @@ function transformMemoTextNodes(
       const newNodes = segments.map((segment) => {
         if (segment.type === "tag") return createTagNode(segment.value, segment.source);
         if (segment.type === "mention") return createMentionNode(segment.value, segment.source);
+        if (segment.type === "due") return createDueDateNode(segment.value, segment.source, segment.hasTime);
         return { type: "text", value: segment.value } as Text;
       });
       parent.children.splice(index, 1, ...(newNodes as UnistNode[]));

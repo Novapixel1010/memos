@@ -349,6 +349,7 @@
     "memo-comment": "{{user}} has a comment on your {{memo}}.",
     "no-archived": "No archived notifications",
     "no-unread": "No unread notifications",
+    "reminder": "Reminder due",
     "space-invitation": "invited you to join a space",
     "space-invitation-accepted": "You joined this space.",
     "space-invitation-open": "Open space",
@@ -517,6 +518,11 @@
     "embedded-usage": "Use as Embedded Content",
     "no-memos-found": "No memos found",
     "search-placeholder": "Search content"
+  },
+  "reminder": {
+    "due-today": "Due today",
+    "overdue": "Overdue",
+    "upcoming": "Upcoming"
   },
   "resource": {
     "clear": "Clear",

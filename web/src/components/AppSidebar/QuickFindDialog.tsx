@@ -11,7 +11,13 @@ import { getFilterSearch, isSearchFilter, type MemoFilter, useMemoFilterContext 
 import { useSpaceContext } from "@/contexts/SpaceContext";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useMemoViews } from "@/hooks/useUserQueries";
-import { BUILTIN_TASKS_VIEW_ID, getMemoViewId, isMemoCollectionRoute } from "@/lib/memo-views";
+import {
+  BUILTIN_OVERDUE_VIEW_ID,
+  BUILTIN_TASKS_VIEW_ID,
+  BUILTIN_UPCOMING_VIEW_ID,
+  getMemoViewId,
+  isMemoCollectionRoute,
+} from "@/lib/memo-views";
 import { extractSpaceUidFromName, formatSpaceUidForDisplay } from "@/lib/space-display";
 import { cn } from "@/lib/utils";
 import { useTranslate } from "@/utils/i18n";
@@ -90,7 +96,13 @@ const QuickFindDialog = () => {
   const viewApplies = isMemoCollectionRoute(location.pathname);
   const selectedMemoView = viewApplies ? memoViews.find((item) => getMemoViewId(item.name) === memoView) : undefined;
   const lensLabel =
-    viewApplies && memoView === BUILTIN_TASKS_VIEW_ID ? t("common.tasks") : selectedMemoView?.title || getScopeLabel(location.pathname, t);
+    viewApplies && memoView === BUILTIN_TASKS_VIEW_ID
+      ? t("common.tasks")
+      : viewApplies && memoView === BUILTIN_OVERDUE_VIEW_ID
+        ? t("reminder.overdue")
+        : viewApplies && memoView === BUILTIN_UPCOMING_VIEW_ID
+          ? t("reminder.upcoming")
+          : selectedMemoView?.title || getScopeLabel(location.pathname, t);
   const selectedSpaceUid = selectedSpaceName ? extractSpaceUidFromName(selectedSpaceName) : "";
   const selectedSpaceUidDisplay = selectedSpaceName ? formatSpaceUidForDisplay(selectedSpaceName) : "";
   const showSelectedSpaceUid = selectedSpace ? duplicateSpaceTitles.has(selectedSpace.title) : Boolean(selectedSpaceName);

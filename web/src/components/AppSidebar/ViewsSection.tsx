@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontalIcon, PlusIcon, SquareCheckIcon } from "lucide-react";
+import { AlarmClockIcon, CalendarClockIcon, MoreHorizontalIcon, PlusIcon, SquareCheckIcon } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -14,7 +14,13 @@ import { useMemoFilterContext } from "@/contexts/MemoFilterContext";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useMemoViews, userKeys } from "@/hooks/useUserQueries";
 import { handleError } from "@/lib/error";
-import { BUILTIN_TASKS_VIEW_ID, getMemoViewId, isMemoCollectionRoute } from "@/lib/memo-views";
+import {
+  BUILTIN_OVERDUE_VIEW_ID,
+  BUILTIN_TASKS_VIEW_ID,
+  BUILTIN_UPCOMING_VIEW_ID,
+  getMemoViewId,
+  isMemoCollectionRoute,
+} from "@/lib/memo-views";
 import { cn } from "@/lib/utils";
 import { collectionPathForLocation, ROUTES } from "@/router/routes";
 import type { MemoView } from "@/types/proto/api/v1/user_service_pb";
@@ -92,6 +98,18 @@ const ViewsSection = ({ manageActive = false }: { manageActive?: boolean }) => {
         icon={SquareCheckIcon}
         label={t("common.tasks")}
         onClick={() => handleView(BUILTIN_TASKS_VIEW_ID)}
+      />
+      <SidebarRow
+        state={!manageActive && selectedMemoView === BUILTIN_OVERDUE_VIEW_ID ? "checked" : "idle"}
+        icon={AlarmClockIcon}
+        label={t("reminder.overdue")}
+        onClick={() => handleView(BUILTIN_OVERDUE_VIEW_ID)}
+      />
+      <SidebarRow
+        state={!manageActive && selectedMemoView === BUILTIN_UPCOMING_VIEW_ID ? "checked" : "idle"}
+        icon={CalendarClockIcon}
+        label={t("reminder.upcoming")}
+        onClick={() => handleView(BUILTIN_UPCOMING_VIEW_ID)}
       />
       {memoViews.map((memoView) => {
         const id = getMemoViewId(memoView.name);

@@ -269,6 +269,11 @@ func collectInboxMemoIDs(inboxes []*store.Inbox) []int32 {
 					memoIDs = append(memoIDs, payload.RelatedMemoId)
 				}
 			}
+		case storepb.InboxMessage_REMINDER:
+			payload := inbox.Message.GetReminder()
+			if payload != nil && payload.MemoId > 0 {
+				memoIDs = append(memoIDs, payload.MemoId)
+			}
 		default:
 			// Ignore notification types without memo references.
 		}
@@ -347,6 +352,17 @@ func (s *APIV1Service) convertInboxToUserNotificationWithUsersAndMemos(ctx conte
 			notification.Payload = &v1pb.UserNotification_SpaceInvitation{
 				SpaceInvitation: payload,
 			}
+		case storepb.InboxMessage_REMINDER:
+			notification.Type = v1pb.UserNotification_REMINDER
+			payload, err := s.convertReminderNotificationPayload(inbox.Message, memosByID)
+			if err != nil {
+				return nil, err
+			}
+			if payload != nil {
+				notification.Payload = &v1pb.UserNotification_Reminder{
+					Reminder: payload,
+				}
+			}
 		default:
 			notification.Type = v1pb.UserNotification_TYPE_UNSPECIFIED
 		}
@@ -408,6 +424,12 @@ func (s *APIV1Service) canAccessNotification(ctx context.Context, viewer *store.
 	case storepb.InboxMessage_SPACE_INVITATION:
 		space, _, state := spaceContext.resolve(inbox.Message.GetSpaceInvitation().GetSpaceId())
 		return space != nil && state != v1pb.UserNotification_SpaceInvitationPayload_STATE_UNSPECIFIED, nil
+	case storepb.InboxMessage_REMINDER:
+		payload := inbox.Message.GetReminder()
+		if payload == nil {
+			return false, nil
+		}
+		return check(payload.MemoId)
 	default:
 		return true, nil
 	}
@@ -448,6 +470,29 @@ func (s *APIV1Service) convertMemoCommentNotificationPayload(message *storepb.In
 		RelatedMemo:        fmt.Sprintf("%s%s", MemoNamePrefix, relatedMemo.UID),
 		MemoSnippet:        memoSnippet,
 		RelatedMemoSnippet: relatedMemoSnippet,
+	}, nil
+}
+
+func (s *APIV1Service) convertReminderNotificationPayload(message *storepb.InboxMessage, memosByID map[int32]*store.Memo) (*v1pb.UserNotification_ReminderPayload, error) {
+	reminder := message.GetReminder()
+	if message == nil || message.Type != storepb.InboxMessage_REMINDER || reminder == nil {
+		return nil, nil
+	}
+
+	memo := memosByID[reminder.MemoId]
+	if memo == nil {
+		return nil, nil
+	}
+
+	memoSnippet, err := s.memoNotificationSnippet(memo)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get reminder memo snippet")
+	}
+
+	return &v1pb.UserNotification_ReminderPayload{
+		Memo:        fmt.Sprintf("%s%s", MemoNamePrefix, memo.UID),
+		MemoSnippet: memoSnippet,
+		DueTime:     timestamppb.New(time.Unix(reminder.DueTime, 0)),
 	}, nil
 }
 

@@ -12,6 +12,12 @@ export interface MentionNode {
   data: MentionNodeData;
 }
 
+export interface DueDateNode {
+  type: "dueDateNode";
+  value: string;
+  data: DueDateNodeData;
+}
+
 export interface TagNodeData {
   hName: "span";
   hProperties: TagNodeProperties;
@@ -24,6 +30,12 @@ export interface MentionNodeData {
   hChildren: Array<{ type: "text"; value: string }>;
 }
 
+export interface DueDateNodeData {
+  hName: "span";
+  hProperties: DueDateNodeProperties;
+  hChildren: Array<{ type: "text"; value: string }>;
+}
+
 export interface TagNodeProperties {
   className: string;
   "data-tag": string;
@@ -32,6 +44,12 @@ export interface TagNodeProperties {
 export interface MentionNodeProperties {
   className: string;
   "data-mention": string;
+}
+
+export interface DueDateNodeProperties {
+  className: string;
+  "data-due-date": string;
+  "data-has-time": "true" | "false";
 }
 
 export interface ExtendedData extends Data {
@@ -78,6 +96,27 @@ export function isMentionElement(node: HastElement): boolean {
     return true;
   }
   if (typeof className === "string" && className.split(/\s+/).includes("mention")) {
+    return true;
+  }
+
+  return false;
+}
+
+export function isDueDateElement(node: HastElement): boolean {
+  if (hasExtendedData(node) && node.data.mdastType === "dueDateNode") {
+    return true;
+  }
+
+  const dataDueDate = node.properties?.["data-due-date"];
+  if (typeof dataDueDate === "string" && dataDueDate !== "") {
+    return true;
+  }
+
+  const className = node.properties?.className;
+  if (Array.isArray(className) && className.includes("due-date")) {
+    return true;
+  }
+  if (typeof className === "string" && className.split(/\s+/).includes("due-date")) {
     return true;
   }
 

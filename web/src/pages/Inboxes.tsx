@@ -3,6 +3,7 @@ import { sortBy } from "lodash-es";
 import { BellIcon } from "lucide-react";
 import MemoCommentMessage from "@/components/Inbox/MemoCommentMessage";
 import MemoMentionMessage from "@/components/Inbox/MemoMentionMessage";
+import ReminderMessage from "@/components/Inbox/ReminderMessage";
 import SpaceInvitationMessage from "@/components/Inbox/SpaceInvitationMessage";
 import Placeholder from "@/components/Placeholder";
 import { useAppSidebar } from "@/contexts/AppSidebarContext";
@@ -65,6 +66,9 @@ const Inboxes = () => {
                   }
                   if (notification.type === UserNotification_Type.SPACE_INVITATION) {
                     return <SpaceInvitationMessage key={notification.name} notification={notification} />;
+                  }
+                  if (notification.type === UserNotification_Type.REMINDER) {
+                    return <ReminderMessage key={notification.name} notification={notification} />;
                   }
                   return null;
                 })}

@@ -161,6 +161,17 @@ func NewSchema() Schema {
 				CompareNeq: true,
 			},
 		},
+		"due_time": {
+			// The reminder due time parsed from a `!due(...)` token, if any.
+			// Stored as a plain unix-seconds BIGINT on every dialect, so no
+			// per-dialect conversion is needed (unlike created_ts/updated_ts,
+			// which MySQL stores as TIMESTAMP).
+			Name:        "due_time",
+			Kind:        FieldKindScalar,
+			Type:        FieldTypeTimestamp,
+			Column:      Column{Table: "memo", Name: "due_time"},
+			Expressions: map[DialectName]string{},
+		},
 		"visibility": {
 			Name:        "visibility",
 			Kind:        FieldKindScalar,
@@ -263,6 +274,7 @@ func NewSchema() Schema {
 		cel.Variable("created_ts", cel.TimestampType),
 		cel.Variable("updated_ts", cel.TimestampType),
 		cel.Variable("pinned", cel.BoolType),
+		cel.Variable("due_time", cel.TimestampType),
 		cel.Variable("tag", cel.StringType),
 		cel.Variable("tags", cel.ListType(cel.StringType)),
 		cel.Variable("visibility", cel.StringType),
